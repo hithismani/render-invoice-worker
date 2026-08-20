@@ -39,15 +39,22 @@ async function ensureSatori(): Promise<void> {
 
 export async function renderSvg(invoice: InvoiceLike, width = 900, embedFont = true): Promise<string> {
   await ensureSatori();
-  const { family, regular, bold } = await loadInvoiceFont(invoice.font);
+  const { family, regular, bold, fallbackRegular, fallbackBold } = await loadInvoiceFont(invoice.font);
   const tree = invoiceElement(invoice, { forExport: true });
+  const fonts = [
+    { name: family, data: regular, weight: 400 as const, style: 'normal' as const },
+    { name: family, data: bold, weight: 700 as const, style: 'normal' as const },
+  ];
+  if (family !== 'Inter') {
+    fonts.push(
+      { name: 'Inter', data: fallbackRegular, weight: 400, style: 'normal' },
+      { name: 'Inter', data: fallbackBold, weight: 700, style: 'normal' },
+    );
+  }
   return satori(tree, {
     width,
     embedFont,
-    fonts: [
-      { name: family, data: regular, weight: 400, style: 'normal' },
-      { name: family, data: bold, weight: 700, style: 'normal' },
-    ],
+    fonts,
   });
 }
 
@@ -62,10 +69,19 @@ export async function renderPng(invoice: InvoiceLike, width = 900): Promise<Uint
 export async function renderPdf(invoice: InvoiceLike, width = 900): Promise<Uint8Array> {
   const fitToA4 = invoice.autoSize === false;
   const svg = await renderSvg(invoice, width, false);
-  const { regular, bold } = await loadInvoiceFont(invoice.font);
+  const { family, regular, bold, fallbackRegular, fallbackBold } = await loadInvoiceFont(invoice.font);
   const editUrl =
     invoice.includeEditLink === false
       ? undefined
       : `https://renderinvoice.com/playground#i=${compressToEncodedURIComponent(JSON.stringify(invoice))}`;
-  return satoriSvgToPdf(svg, { regular, bold }, { fitToA4, editUrl });
+  return satoriSvgToPdf(
+    svg,
+    {
+      regular,
+      bold,
+      fallbackRegular: family === 'Inter' ? undefined : fallbackRegular,
+      fallbackBold: family === 'Inter' ? undefined : fallbackBold,
+    },
+    { fitToA4, editUrl },
+  );
 }

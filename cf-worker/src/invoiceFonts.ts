@@ -41,34 +41,59 @@ function isSfnt(buf: ArrayBuffer): boolean {
   return tag === 'OTTO' || tag === 'true' || tag === 'typ1';
 }
 
-export async function loadInvoiceFont(family?: string | null): Promise<{ family: string; regular: ArrayBuffer; bold: ArrayBuffer }> {
+export type LoadedFont = {
+  family: string;
+  regular: ArrayBuffer;
+  bold: ArrayBuffer;
+  fallbackRegular: ArrayBuffer;
+  fallbackBold: ArrayBuffer;
+};
+
+export async function loadInvoiceFont(family?: string | null): Promise<LoadedFont> {
   const name = satoriFontName(family);
+  const primary = await loadPair(name);
+  const inter = name === 'Inter' ? primary : await loadPair('Inter');
+  return {
+    family: name,
+    regular: primary.regular,
+    bold: primary.bold,
+    fallbackRegular: inter.regular,
+    fallbackBold: inter.bold,
+  };
+}
+
+async function loadPair(name: string): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
   const hit = cache.get(name);
-  if (hit && isSfnt(hit.regular) && isSfnt(hit.bold)) return { family: name, ...hit };
+  if (hit && isSfnt(hit.regular) && isSfnt(hit.bold)) return hit;
   if (hit) cache.delete(name);
 
   try {
     const regular = await fetchTtf(name, 400);
     const bold = await fetchTtf(name, 700).catch(() => regular);
-    cache.set(name, { regular, bold });
-    return { family: name, regular, bold };
+    const pair = { regular, bold };
+    cache.set(name, pair);
+    return pair;
   } catch {
-    if (name !== 'Inter') return loadInvoiceFont('Inter');
+    if (name !== 'Inter') return loadPair('Inter');
     throw new Error(`Could not load font "${name}"`);
   }
 }
 
 async function fetchTtf(family: string, weight: number): Promise<ArrayBuffer> {
-  try {
-    const fromSource = await fetchFontsource(family, weight);
-    if (isSfnt(fromSource)) return fromSource;
-  } catch {
-    /* try Google next */
+  const subsets = ['latin-ext', 'latin'];
+  for (const subset of subsets) {
+    try {
+      const fromSource = await fetchFontsource(family, weight, subset);
+      if (isSfnt(fromSource)) return fromSource;
+    } catch {
+      /* try next */
+    }
   }
   const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`;
   const css = await fetch(cssUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1',
+      'User-Agent':
+        'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1',
     },
   });
   if (css.ok) {
@@ -87,12 +112,15 @@ async function fetchTtf(family: string, weight: number): Promise<ArrayBuffer> {
 }
 
 function slug(family: string): string {
-  return family.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return family
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
-async function fetchFontsource(family: string, weight: number): Promise<ArrayBuffer> {
-  const url = `https://cdn.jsdelivr.net/fontsource/fonts/${slug(family)}@5.2.5/latin-${weight}-normal.ttf`;
+async function fetchFontsource(family: string, weight: number, subset: string): Promise<ArrayBuffer> {
+  const url = `https://cdn.jsdelivr.net/fontsource/fonts/${slug(family)}@5.2.5/${subset}-${weight}-normal.ttf`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`Could not load Google Font "${family}"`);
+  if (!r.ok) throw new Error(`Could not load fontsource "${family}" ${subset}`);
   return r.arrayBuffer();
 }
