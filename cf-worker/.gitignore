@@ -6,3 +6,7 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Materialized at postinstall from lockfile-pinned deps (scripts/copy-wasm.mjs)
+wasm/
+.dev.vars

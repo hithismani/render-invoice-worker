@@ -66,14 +66,22 @@ export async function renderPng(invoice: InvoiceLike, width = 900): Promise<Uint
 }
 
 /** Vector PDF: selectable text, path borders/radius. Never a full-page PNG. */
-export async function renderPdf(invoice: InvoiceLike, width = 900): Promise<Uint8Array> {
+export async function renderPdf(
+  invoice: InvoiceLike,
+  opts: { width?: number; playgroundUrl?: string } = {},
+): Promise<Uint8Array> {
+  const width = opts.width ?? 900;
   const fitToA4 = invoice.autoSize === false;
   const svg = await renderSvg(invoice, width, false);
   const { family, regular, bold, fallbackRegular, fallbackBold } = await loadInvoiceFont(invoice.font);
+  // "Edit this invoice" link stamped on the PDF's bottom bar. Base URL is
+  // configurable (PLAYGROUND_URL) so self-hosted domains can point at their
+  // own playground; defaults to the hosted site.
+  const playgroundBase = (opts.playgroundUrl || 'https://renderinvoice.com/playground').replace(/\/+$/, '');
   const editUrl =
     invoice.includeEditLink === false
       ? undefined
-      : `https://renderinvoice.com/playground#i=${compressToEncodedURIComponent(JSON.stringify(invoice))}`;
+      : `${playgroundBase}#i=${compressToEncodedURIComponent(JSON.stringify(invoice))}`;
   return satoriSvgToPdf(
     svg,
     {
