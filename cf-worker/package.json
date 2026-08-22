@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "cf:deploy": "pnpm install && wrangler deploy",
     "tail": "wrangler tail",
     "postinstall": "node ./scripts/copy-wasm.mjs"
   },

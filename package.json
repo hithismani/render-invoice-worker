@@ -1,0 +1,10 @@
+{
+  "name": "render-invoice-worker",
+  "private": true,
+  "description": "Self-hostable RenderInvoice PDF worker (Cloudflare)",
+  "scripts": {
+    "install:worker": "pnpm --dir cf-worker install",
+    "deploy": "pnpm --dir cf-worker install && pnpm --dir cf-worker exec wrangler deploy",
+    "dev": "pnpm --dir cf-worker exec wrangler dev"
+  }
+}

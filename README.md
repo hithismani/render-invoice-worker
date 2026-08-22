@@ -10,6 +10,17 @@ Self-hostable PDF workers for [RenderInvoice](https://renderinvoice.com).
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/hithismani/render-invoice-worker/tree/main/cf-worker)
 
+**Dashboard settings (Workers Builds):**
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `cf-worker` |
+| Deploy command | `pnpm install && pnpm exec wrangler deploy` |
+
+If Root is the repo root instead, use deploy command `pnpm deploy` (runs via the root `package.json`).
+
+Bare `npx wrangler deploy` at the repo root fails with "Could not detect a directory containing static files" - wrangler never sees `cf-worker/wrangler.toml`.
+
 ```bash
 cd cf-worker
 pnpm install

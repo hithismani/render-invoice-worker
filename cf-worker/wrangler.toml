@@ -1,3 +1,6 @@
+# PDF API worker. Cloudflare dashboard Root directory must be `cf-worker`
+# (or this folder). Deploy command: pnpm install && pnpm exec wrangler deploy
+# Do not run wrangler from the parent repo root - there is no worker entry there.
 name = "renderinvoice"
 main = "src/worker.ts"
 compatibility_date = "2024-11-01"
