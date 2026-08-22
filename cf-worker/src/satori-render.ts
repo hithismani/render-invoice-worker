@@ -5,7 +5,7 @@
  *     -> satori (embedFont:false)  -> SVG with real <text> + path geometry
  *     -> satoriSvgToPdf            -> vector PDF (selectable text, borders, radius)
  *
- *   format=png still uses resvg for images only — never embedded into PDF.
+ *   format=png still uses resvg for images only - never embedded into PDF.
  */
 
 import satori, { init as initSatoriWasm } from 'satori/standalone';

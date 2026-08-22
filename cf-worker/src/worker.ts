@@ -94,7 +94,7 @@ export default {
 
     const engine = (url.searchParams.get('engine') || 'satori').toLowerCase();
     if (engine !== 'satori') {
-      return json({ error: `Unknown engine "${engine}" — use satori (default)` }, 400);
+      return json({ error: `Unknown engine "${engine}" - use satori (default)` }, 400);
     }
 
     const format = (url.searchParams.get('format') || 'pdf').toLowerCase();
@@ -117,12 +117,12 @@ export default {
           },
         });
       }
-      return json({ error: `Unknown format "${format}" — use format=png or format=pdf.` }, 400);
+      return json({ error: `Unknown format "${format}" - use format=png or format=pdf.` }, 400);
     } catch (e) {
       // Log details server-side (visible via `wrangler tail` / Workers Logs);
       // never reflect internal error text to API callers.
       console.error('[render] failed:', e instanceof Error ? e.stack : String(e));
-      return json({ error: 'Render failed — check worker logs for details.' }, 500);
+      return json({ error: 'Render failed - check worker logs for details.' }, 500);
     }
   },
 } satisfies ExportedHandler<Env>;

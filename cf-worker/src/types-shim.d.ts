@@ -5,7 +5,7 @@ declare module '*.wasm' {
   export default module;
 }
 
-// satori 0.26 publishes a `./standalone` subpath alongside the root entry —
+// satori 0.26 publishes a `./standalone` subpath alongside the root entry -
 // same surface (default + init), but the standalone entry doesn't auto-init
 // the WASM, which is what we need on Cloudflare Workers. Its own .d.ts is
 // shipped, but we add a fallback declaration here so tsc never gets confused.

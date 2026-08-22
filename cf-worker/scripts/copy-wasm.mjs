@@ -6,7 +6,7 @@
  * `WebAssembly.Module` bindings by wrangler's `[[rules]] type =
  * "CompiledWasm"`). pnpm's hoisting reshuffles paths under
  * `node_modules/.pnpm/...`, which would break import paths every time the
- * lockfile changes — so we copy the .wasm files to a stable location at
+ * lockfile changes - so we copy the .wasm files to a stable location at
  * install time and reference *those*.
  *
  * Run automatically via `postinstall`. Idempotent.
@@ -22,7 +22,7 @@ const NM = join(ROOT, 'node_modules');
 
 if (!existsSync(WASM_DIR)) mkdirSync(WASM_DIR, { recursive: true });
 
-// Walk node_modules to find a file by basename — more robust than
+// Walk node_modules to find a file by basename - more robust than
 // require.resolve (which fails when the package's exports field doesn't
 // expose the .wasm path) and survives pnpm's hoisting.
 function findFile(rootDir, fileName, depthLimit = 6) {
@@ -45,9 +45,9 @@ function findFile(rootDir, fileName, depthLimit = 6) {
 }
 
 const sources = [
-  // resvg's WASM — used to rasterize Satori's SVG output to PNG.
+  // resvg's WASM - used to rasterize Satori's SVG output to PNG.
   ['index_bg.wasm', 'resvg.wasm', '@resvg'],
-  // yoga.wasm — Satori's bundled flexbox layout engine. Must come from the
+  // yoga.wasm - Satori's bundled flexbox layout engine. Must come from the
   // satori package (not yoga-wasm-web) because satori 0.26+ ships its own
   // yoga build that's matched to its loader.
   ['yoga.wasm', 'yoga.wasm', 'satori'],
