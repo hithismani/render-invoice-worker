@@ -17,6 +17,7 @@ import type { InvoiceLike } from './types.js';
 import { compressToEncodedURIComponent } from './lz.js';
 import { loadInvoiceFont } from './invoiceFonts.js';
 import { satoriSvgToPdf } from './satoriSvgToPdf.js';
+import { hydrateInvoiceImages } from './resolveImages.js';
 
 let resvgReady = false;
 let satoriReady = false;
@@ -39,8 +40,10 @@ async function ensureSatori(): Promise<void> {
 
 export async function renderSvg(invoice: InvoiceLike, width = 900, embedFont = true): Promise<string> {
   await ensureSatori();
-  const { family, regular, bold, fallbackRegular, fallbackBold } = await loadInvoiceFont(invoice.font);
-  const tree = invoiceElement(invoice, { forExport: true });
+  // Workers have no DOM Image() - remote img src never loads. Inline first.
+  const hydrated = await hydrateInvoiceImages(invoice);
+  const { family, regular, bold, fallbackRegular, fallbackBold } = await loadInvoiceFont(hydrated.font);
+  const tree = invoiceElement(hydrated, { forExport: true });
   const fonts = [
     { name: family, data: regular, weight: 400 as const, style: 'normal' as const },
     { name: family, data: bold, weight: 700 as const, style: 'normal' as const },
@@ -77,6 +80,7 @@ export async function renderPdf(
   // "Edit this invoice" link stamped on the PDF's bottom bar. Base URL is
   // configurable (PLAYGROUND_URL) so self-hosted domains can point at their
   // own playground; defaults to the hosted site.
+  // Use original invoice for the share hash (keep remote URLs, not fat data: blobs).
   const playgroundBase = (opts.playgroundUrl || 'https://renderinvoice.com/playground').replace(/\/+$/, '');
   const editUrl =
     invoice.includeEditLink === false
