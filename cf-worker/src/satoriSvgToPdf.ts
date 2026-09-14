@@ -227,6 +227,22 @@ function resolveFill(raw: string | undefined, fills: Map<string, string>): strin
 type LinkHit = { uri: string; rect: { x: number; y: number; w: number; h: number } };
 type TextFrag = { x: number; y: number; w: number; h: number; text: string; fill: string };
 
+function fontHasGlyph(font: PDFFont, ch: string): boolean {
+  const cp = ch.codePointAt(0);
+  if (cp == null) return false;
+  const fkFont = (font as unknown as { embedder?: { font?: { hasGlyphForCodePoint?: (c: number) => boolean } } })
+    .embedder?.font;
+  if (fkFont && typeof fkFont.hasGlyphForCodePoint === 'function') {
+    return fkFont.hasGlyphForCodePoint(cp);
+  }
+  if (typeof font.getCharacterSet === 'function') {
+    const cached = (font as unknown as { _charSet?: Set<number> })._charSet;
+    const set = cached ?? ((font as unknown as { _charSet: Set<number> })._charSet = new Set(font.getCharacterSet()));
+    return set.has(cp);
+  }
+  return true;
+}
+
 /** Draw text using primary font, falling back per-glyph for missing currency/etc. */
 function drawTextRun(
   page: PDFPage,
@@ -249,8 +265,16 @@ function drawTextRun(
   const slots: Slot[] = chars.map((ch) => {
     for (const font of fallback ? [primary, fallback] : [primary]) {
       try {
+        if (!fontHasGlyph(font, ch)) continue;
         const w = font.widthOfTextAtSize(ch, size);
-        // .notdef / missing often reports 0 width
+        if (w > 0.01) return { ch, font, w };
+      } catch {
+        /* try next */
+      }
+    }
+    for (const font of fallback ? [primary, fallback] : [primary]) {
+      try {
+        const w = font.widthOfTextAtSize(ch, size);
         if (w > 0.01) return { ch, font, w };
       } catch {
         /* try next */

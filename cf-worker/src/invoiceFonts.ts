@@ -80,15 +80,26 @@ async function loadPair(name: string): Promise<{ regular: ArrayBuffer; bold: Arr
 }
 
 async function fetchTtf(family: string, weight: number): Promise<ArrayBuffer> {
-  const subsets = ['latin-ext', 'latin'];
-  for (const subset of subsets) {
-    try {
-      const fromSource = await fetchFontsource(family, weight, subset);
-      if (isSfnt(fromSource)) return fromSource;
-    } catch {
-      /* try next */
-    }
+  // 1. Google Fonts provides complete TTF builds (~1000 glyphs: full Latin, Latin-Ext, currency symbols like ₹, symbols).
+  try {
+    const fromGoogle = await fetchGoogleTtf(family, weight);
+    if (isSfnt(fromGoogle)) return fromGoogle;
+  } catch {
+    /* try Fontsource next */
   }
+
+  // 2. Fontsource fallback: MUST use 'latin' (never 'latin-ext', which contains only extended unicode and lacks digits/ASCII).
+  try {
+    const fromSource = await fetchFontsource(family, weight);
+    if (isSfnt(fromSource)) return fromSource;
+  } catch {
+    /* failed */
+  }
+
+  throw new Error(`No TTF for "${family}" ${weight}`);
+}
+
+async function fetchGoogleTtf(family: string, weight: number): Promise<ArrayBuffer> {
   const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`;
   const css = await fetch(cssUrl, {
     headers: {
@@ -98,7 +109,7 @@ async function fetchTtf(family: string, weight: number): Promise<ArrayBuffer> {
   });
   if (css.ok) {
     const text = await css.text();
-    const urls = [...text.matchAll(/src:\s*url\(([^)]+)\)/g)].map((m) => m[1]);
+    const urls = [...text.matchAll(/src:\s*url\(([^)]+)\)/g)].map((m) => m[1].replace(/['"]/g, '').trim());
     const ttfUrl = urls.find((u) => /\.(ttf|otf)(\?|$)/i.test(u)) || urls.find((u) => !/woff2?/i.test(u));
     if (ttfUrl) {
       const file = await fetch(ttfUrl);
@@ -108,7 +119,7 @@ async function fetchTtf(family: string, weight: number): Promise<ArrayBuffer> {
       }
     }
   }
-  throw new Error(`No TTF for "${family}" ${weight}`);
+  throw new Error(`No Google TTF for "${family}" ${weight}`);
 }
 
 function slug(family: string): string {
@@ -118,9 +129,9 @@ function slug(family: string): string {
     .replace(/^-|-$/g, '');
 }
 
-async function fetchFontsource(family: string, weight: number, subset: string): Promise<ArrayBuffer> {
-  const url = `https://cdn.jsdelivr.net/fontsource/fonts/${slug(family)}@5.2.5/${subset}-${weight}-normal.ttf`;
+async function fetchFontsource(family: string, weight: number): Promise<ArrayBuffer> {
+  const url = `https://cdn.jsdelivr.net/fontsource/fonts/${slug(family)}@5.2.5/latin-${weight}-normal.ttf`;
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`Could not load fontsource "${family}" ${subset}`);
+  if (!r.ok) throw new Error(`Could not load fontsource "${family}"`);
   return r.arrayBuffer();
 }
